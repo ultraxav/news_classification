@@ -1,11 +1,11 @@
-"""
+'''
 En este archivo estan los tokenizers y stemmers
-"""
+'''
 from nltk.stem.snowball import SnowballStemmer
 from typing import List, Callable, Optional, Pattern
 import re
 
-stemmer = SnowballStemmer("spanish")
+stemmer = SnowballStemmer('spanish')
 
 
 def stem(tokens: List[str]) -> List[str]:
