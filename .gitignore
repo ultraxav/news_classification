@@ -3,3 +3,6 @@
 
 # Jupyter Notebooks
 *.ipynb
+
+# pyc files
+*.pyc
