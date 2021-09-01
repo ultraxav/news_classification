@@ -80,7 +80,7 @@ df_links = pd.DataFrame(
 df_links
 
 # %%
-df_links.to_csv('df_links_' + seccion + '.csv', index=False)
+df_links.to_csv('../data/01_raw/df_links_' + seccion + '.csv', index=False)
 
 # %%
 for i in tqdm(range(1, pags, 1)):
@@ -105,7 +105,12 @@ for i in tqdm(range(1, pags, 1)):
         }
     )
 
-    df_links.to_csv('df_links_' + seccion + '.csv', mode='a', header=False, index=False)
+    df_links.to_csv(
+        '../data/01_raw/df_links_' + seccion + '.csv',
+        mode='a',
+        header=False,
+        index=False,
+    )
 
     time.sleep(3)
 
@@ -124,7 +129,7 @@ soup.title.string
 # %%
 df_noticia = {
     'titulo': soup.title.string.split(' |')[0],
-    'fecha': pd.to_datetime(soup.find_all('div', class_='date')[1].string),
+    'fecha': soup.find_all('div', class_='date')[1].string,
     'nota': soup.find('div', class_='article-main-content article-text').get_text(
         separator=' ', strip=True
     ),
@@ -136,12 +141,12 @@ df_noticia
 
 # %%
 df_noticias = pd.DataFrame(columns=['titulo', 'fecha', 'nota', 'link', 'seccion'])
-df_noticias.to_csv('df_noticias_' + seccion + '.csv', index=False)
+df_noticias.to_csv('../data/01_raw/df_noticias_' + seccion + '.csv', index=False)
 
 df_error = pd.DataFrame(columns=['link', 'seccion'])
-df_error.to_csv('df_error_' + seccion + '.csv', index=False)
+df_error.to_csv('../data/01_raw/df_error_' + seccion + '.csv', index=False)
 
-noticias = pd.read_csv('df_links_' + seccion + '.csv')
+noticias = pd.read_csv('../data/01_raw/df_links_' + seccion + '.csv')
 
 noticias = noticias['link']
 
@@ -155,9 +160,7 @@ for noticia in tqdm(noticias[195:]):
             pd.Series(
                 {
                     'titulo': soup.title.string.split(' |')[0],
-                    'fecha': pd.to_datetime(
-                        soup.find_all('div', class_='date')[1].string
-                    ),
+                    'fecha': soup.find_all('div', class_='date')[1].string,
                     'nota': soup.find(
                         'div', class_='article-main-content article-text'
                     ).get_text(separator=' ', strip=True),
@@ -170,7 +173,10 @@ for noticia in tqdm(noticias[195:]):
         )
 
         df_noticia.to_csv(
-            'df_noticias_' + seccion + '.csv', mode='a', header=False, index=False
+            '../data/01_raw/df_noticias_' + seccion + '.csv',
+            mode='a',
+            header=False,
+            index=False,
         )
 
     except:
@@ -186,7 +192,10 @@ for noticia in tqdm(noticias[195:]):
         )
 
         df_error.to_csv(
-            'df_error_' + seccion + '.csv', mode='a', header=False, index=False
+            '../data/01_raw/df_error_' + seccion + '.csv',
+            mode='a',
+            header=False,
+            index=False,
         )
 
-    time.sleep(4)
+    time.sleep(3)
