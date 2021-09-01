@@ -38,8 +38,8 @@ from bs4 import BeautifulSoup
 # ## Difinir que sección del diario a scrappear
 
 # %%
-# seccion = 'el-mundo' #350
-# seccion = 'economia' #400
+# seccion = 'el-mundo' # 350
+# seccion = 'economia' # 400
 seccion = 'sociedad'  # 800
 pags = 800
 
