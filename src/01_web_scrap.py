@@ -43,6 +43,8 @@ from bs4 import BeautifulSoup
 seccion = 'sociedad'  # 800
 pags = 800
 
+data_path = '../data/01_raw/'
+
 # %% [markdown]
 # ## Estructura de la página
 #
@@ -80,7 +82,7 @@ df_links = pd.DataFrame(
 df_links
 
 # %%
-df_links.to_csv('../data/01_raw/df_links_' + seccion + '.csv', index=False)
+df_links.to_csv(data_path + 'df_links_' + seccion + '.csv', index=False)
 
 # %%
 for i in tqdm(range(1, pags, 1)):
@@ -141,17 +143,17 @@ df_noticia
 
 # %%
 df_noticias = pd.DataFrame(columns=['titulo', 'fecha', 'nota', 'link', 'seccion'])
-df_noticias.to_csv('../data/01_raw/df_noticias_' + seccion + '.csv', index=False)
+df_noticias.to_csv(data_path + 'df_noticias_' + seccion + '.csv', index=False)
 
 df_error = pd.DataFrame(columns=['link', 'seccion'])
-df_error.to_csv('../data/01_raw/df_error_' + seccion + '.csv', index=False)
+df_error.to_csv(data_path + 'df_error_' + seccion + '.csv', index=False)
 
-noticias = pd.read_csv('../data/01_raw/df_links_' + seccion + '.csv')
+noticias = pd.read_csv(data_path + 'df_links_' + seccion + '.csv')
 
 noticias = noticias['link']
 
 # %%
-for noticia in tqdm(noticias[195:]):
+for noticia in tqdm(noticias):
     try:
         response = requests.get(noticia)
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -173,7 +175,7 @@ for noticia in tqdm(noticias[195:]):
         )
 
         df_noticia.to_csv(
-            '../data/01_raw/df_noticias_' + seccion + '.csv',
+            data_path + 'df_noticias_' + seccion + '.csv',
             mode='a',
             header=False,
             index=False,
@@ -192,7 +194,7 @@ for noticia in tqdm(noticias[195:]):
         )
 
         df_error.to_csv(
-            '../data/01_raw/df_error_' + seccion + '.csv',
+            data_path + 'df_error_' + seccion + '.csv',
             mode='a',
             header=False,
             index=False,
