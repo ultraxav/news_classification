@@ -1,0 +1,5 @@
+# CSV Files
+*.csv
+
+# Jupyter Notebooks
+*.ipynb
