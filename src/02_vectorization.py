@@ -38,36 +38,63 @@ from typing import List
 
 # %%
 df_el_mundo = pd.read_csv('../data/01_raw/df_noticias_el-mundo.csv')
-# df_economia = pd.read_csv('../data/01_raw/df_noticias_economia.csv')
+df_economia = pd.read_csv('../data/01_raw/df_noticias_economia.csv')
 df_sociedad = pd.read_csv('../data/01_raw/df_noticias_sociedad.csv')
 
-df_noticias = pd.concat([df_el_mundo, df_sociedad])
+df_el_mundo['fecha'] = pd.to_datetime(df_el_mundo['fecha'], format='%d/%m/%Y')
+df_economia['fecha'] = pd.to_datetime(df_economia['fecha'], format='%d/%m/%Y')
+df_sociedad['fecha'] = pd.to_datetime(df_sociedad['fecha'], format='%d/%m/%Y')
+
+df_noticias = pd.concat([df_el_mundo, df_economia, df_sociedad])
+print(f'{df_noticias.shape[0]} noticias totales')
 df_noticias = df_noticias[pd.isna(df_noticias['nota']) == False]
-df_noticias['fecha'] = pd.to_datetime(df_noticias['fecha'])
+print(f'{df_noticias.shape[0]} noticias sin notas sin texto')
 df_noticias
 
 # %%
-# print(df_noticias[df_noticias['seccion'] == 'el-mundo']['fecha'].min())
-# print(df_noticias[df_noticias['seccion'] == 'economia']['fecha'].min())
-# print(df_noticias[df_noticias['seccion'] == 'sociedad']['fecha'].min())
-
-# print(df_noticias[df_noticias['seccion'] == 'el-mundo']['fecha'].max())
-# print(df_noticias[df_noticias['seccion'] == 'economia']['fecha'].max())
-# print(df_noticias[df_noticias['seccion'] == 'sociedad']['fecha'].max())
+df_el_mundo.iloc[34]
 
 # %%
-# df_noticias.dtypes
+df_economia.iloc[34]
 
 # %%
-# df_noticias[pd.isna(df_noticias['nota']) == True]
+df_sociedad.iloc[34]
+
+# %%
+print('Fechas Mínimas')
+print(df_noticias[df_noticias['seccion'] == 'el-mundo']['fecha'].min())
+print(df_noticias[df_noticias['seccion'] == 'economia']['fecha'].min())
+print(df_noticias[df_noticias['seccion'] == 'sociedad']['fecha'].min())
+
+print('\nFechas Máximas')
+print(df_noticias[df_noticias['seccion'] == 'el-mundo']['fecha'].max())
+print(df_noticias[df_noticias['seccion'] == 'economia']['fecha'].max())
+print(df_noticias[df_noticias['seccion'] == 'sociedad']['fecha'].max())
+
+# %%
+df_noticias = df_noticias[
+    df_noticias['fecha']
+    >= df_noticias[df_noticias['seccion'] == 'el-mundo']['fecha'].min()
+]
+
+# %%
+print('Fechas Mínimas')
+print(df_noticias[df_noticias['seccion'] == 'el-mundo']['fecha'].min())
+print(df_noticias[df_noticias['seccion'] == 'economia']['fecha'].min())
+print(df_noticias[df_noticias['seccion'] == 'sociedad']['fecha'].min())
+
+print('\nFechas Máximas')
+print(df_noticias[df_noticias['seccion'] == 'el-mundo']['fecha'].max())
+print(df_noticias[df_noticias['seccion'] == 'economia']['fecha'].max())
+print(df_noticias[df_noticias['seccion'] == 'sociedad']['fecha'].max())
 
 # %% [markdown]
 # ## Definiciones
 
 # %%
 # Storpwords en español
-STOPWORDS_FILE = 'ref_code/stopwords_es.txt'
-STOPWORDS_FILE_SIN_ACENTOS = 'ref_code/stopwords_es_sin_acentos.txt'
+STOPWORDS_FILE = 'utils/stopwords_es.txt'
+STOPWORDS_FILE_SIN_ACENTOS = 'utils/stopwords_es_sin_acentos.txt'
 
 # Cantidad minima y maxima de docs que tienen que tener a un token para conservarlo.
 MIN_DF = 3
@@ -78,9 +105,9 @@ MIN_NGRAMS = 1
 MAX_NGRAMS = 2
 
 # Nombre de datasets tratados
-VECTORS_FILE = 'vectores.joblib'
-TARGETS_FILE = 'targets.joblib'
-FEATURE_NAMES_FILE = 'features.joblib'
+VECTORS_FILE = '../data/02_processed/vectores.joblib'
+TARGETS_FILE = '../data/02_processed/targets.joblib'
+FEATURE_NAMES_FILE = '../data/02_processed/features.joblib'
 
 
 # %% [markdown]
