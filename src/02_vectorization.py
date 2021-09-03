@@ -52,41 +52,42 @@ print(f'{df_noticias.shape[0]} noticias sin notas sin texto')
 df_noticias
 
 # %%
-df_el_mundo.iloc[34]
-
-# %%
-df_economia.iloc[34]
-
-# %%
-df_sociedad.iloc[34]
-
-# %%
 print('Fechas Mínimas')
 print(df_noticias[df_noticias['seccion'] == 'el-mundo']['fecha'].min())
 print(df_noticias[df_noticias['seccion'] == 'economia']['fecha'].min())
 print(df_noticias[df_noticias['seccion'] == 'sociedad']['fecha'].min())
 
-print('\nFechas Máximas')
-print(df_noticias[df_noticias['seccion'] == 'el-mundo']['fecha'].max())
-print(df_noticias[df_noticias['seccion'] == 'economia']['fecha'].max())
-print(df_noticias[df_noticias['seccion'] == 'sociedad']['fecha'].max())
+# %%
+df_noticias['mes'] = df_noticias['fecha'].dt.to_period('M')
 
 # %%
-df_noticias = df_noticias[
-    df_noticias['fecha']
-    >= df_noticias[df_noticias['seccion'] == 'el-mundo']['fecha'].min()
-]
+df_noticias.pivot_table(
+    index='mes', columns='seccion', values='nota', aggfunc='count'
+).sort_index()
+
+# %%
+df_noticias = df_noticias[df_noticias['mes'] >= '2021-04']
+df_noticias = df_noticias[df_noticias['mes'] < '2021-09']
+
+# %%
+df_noticias.pivot_table(
+    index='mes', columns='seccion', values='nota', aggfunc='count'
+).sort_index()
+
+# %%
+df_noticias['seccion'].value_counts()
+
+# %%
+df_noticias = df_noticias.reset_index(drop=True)
 
 # %%
 print('Fechas Mínimas')
-print(df_noticias[df_noticias['seccion'] == 'el-mundo']['fecha'].min())
-print(df_noticias[df_noticias['seccion'] == 'economia']['fecha'].min())
-print(df_noticias[df_noticias['seccion'] == 'sociedad']['fecha'].min())
+print(df_noticias['fecha'].min())
 
 print('\nFechas Máximas')
-print(df_noticias[df_noticias['seccion'] == 'el-mundo']['fecha'].max())
-print(df_noticias[df_noticias['seccion'] == 'economia']['fecha'].max())
-print(df_noticias[df_noticias['seccion'] == 'sociedad']['fecha'].max())
+print(df_noticias['fecha'].max())
+
+print(f'\n{df_noticias.shape[0]} noticias filtradas por fecha')
 
 # %% [markdown]
 # ## Definiciones

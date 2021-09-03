@@ -67,6 +67,7 @@ def _calcular_auc_por_clase(
     tpr = dict()
     roc_auc = dict()
     n_clases = targets_preds.shape[1]
+
     for i in range(n_clases):
         fpr[i], tpr[i], _ = roc_curve(targets_reales[:, i], targets_preds[:, i])
         roc_auc[i] = auc(fpr[i], tpr[i])
@@ -90,11 +91,13 @@ def calcular_e_imprimir_auc(
     """
     # Entrenar 1 clasificador por categoria usando "one vs. rest", usamos esto para calcular AUC
     classificador_por_clase = OneVsRestClassifier(clasificador)
+
     # Targets_preds_por_clase es una matriz donde cada fila es un vector, y cada columna es el
     # score del clasifcador para cada categoria para la fila correspondiente de test_fold_selected
     targets_preds_por_clase = classificador_por_clase.fit(
         train_fold_selected, train_targets_binarios_por_clase
     ).predict(test_fold_selected)
+
     for idx_clase, valor_auc in _calcular_auc_por_clase(
         test_targets_binarios_por_clase, targets_preds_por_clase
     ).items():
@@ -107,6 +110,7 @@ def calcular_e_imprimir_auc(
 
 def pesos_de_features(score_fn, train_fold, train_targets_fold) -> np.ndarray:
     scores = np.empty((train_fold.shape[1]), dtype=float)
+
     for i in range(0, train_fold.shape[1]):
         scores[i] = score_fn(train_fold[:, i], train_targets_fold)[0]
     return scores
@@ -124,11 +128,14 @@ def imprimir_features_con_pesos(
     :top_n: cuantos de los mejores scores imprimir. -1 imprime todos.
     """
     pesos_features = pesos_de_features(score_fn, train_fold, train_targets_fold)
+
     # Conseguir los indices que ordenarian a "pesos". Como argsort solo ordena en orden ascendente,
     # damos vuelta el arreglo
     indice_orden_desc_pesos = np.argsort(pesos_features)[::-1]
+
     if top_n == -1:
         top_n = train_fold.shape[1]
+
     for i in range(0, top_n):
         print(
             nombres_features[indice_orden_desc_pesos[i]],
@@ -146,6 +153,7 @@ def nombres_features_seleccionadas(selector_features, nombres_features):
     """
     cols = selector_features.get_support()
     new_features = []
+
     for selected, feature in zip(cols, nombres_features):
         if selected:
             new_features.append(feature)
@@ -190,8 +198,9 @@ accuracy_promedio = 0
 
 # %%
 for train_index, test_index in StratifiedKFold(
-    n_splits=CANT_FOLDS_CV, random_state=None, shuffle=True
+    n_splits=CANT_FOLDS_CV, random_state=1234, shuffle=True
 ).split(vectores, targets):
+
     # Armar folds de entrenamiento para CV
     train_fold = vectores[train_index]
     train_targets_fold = targets[train_index]
