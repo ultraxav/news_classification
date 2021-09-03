@@ -14,7 +14,7 @@ To install them, run:
 pip install -r src/requirements.txt
 ```
 
-## Jupyter Notebooks
+## How to hydrate Jupyter Notebooks
 
 For the ease of sharing the notebooks Jupytext  was used to save them in plain text, and avoid the hassle of the notebooks metadata.
 

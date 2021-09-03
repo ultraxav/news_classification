@@ -9,3 +9,6 @@
 
 # joblib files
 *.joblib
+
+# pre-commit conf
+.pre-commit-config.yaml
