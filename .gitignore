@@ -6,3 +6,6 @@
 
 # pyc files
 *.pyc
+
+# joblib files
+*.joblib
