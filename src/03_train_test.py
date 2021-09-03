@@ -88,9 +88,10 @@ def calcular_e_imprimir_auc(
     :param test_fold_selected: Fold de test
     :param test_targets_binarios_por_clase: Categorias del fold de test, en 1-hot encoding.
     """
-    # entrenar 1 clasificador por categoria usando "one vs. rest", usamos esto para calcular AUC
+    # Entrenar 1 clasificador por categoria usando "one vs. rest", usamos esto para calcular AUC
     classificador_por_clase = OneVsRestClassifier(clasificador)
-    # targets_preds_por_clase es una matriz donde cada fila es un vector, y cada columna es el score del clasifcador para cada categoria para la fila correspondiente de test_fold_selected
+    # Targets_preds_por_clase es una matriz donde cada fila es un vector, y cada columna es el
+    # score del clasifcador para cada categoria para la fila correspondiente de test_fold_selected
     targets_preds_por_clase = classificador_por_clase.fit(
         train_fold_selected, train_targets_binarios_por_clase
     ).predict(test_fold_selected)
@@ -105,7 +106,7 @@ def calcular_e_imprimir_auc(
 
 
 def pesos_de_features(score_fn, train_fold, train_targets_fold) -> np.ndarray:
-    scores = np.empty((train_fold.shape[1]), dtype=np.float)
+    scores = np.empty((train_fold.shape[1]), dtype=float)
     for i in range(0, train_fold.shape[1]):
         scores[i] = score_fn(train_fold[:, i], train_targets_fold)[0]
     return scores
@@ -123,7 +124,8 @@ def imprimir_features_con_pesos(
     :top_n: cuantos de los mejores scores imprimir. -1 imprime todos.
     """
     pesos_features = pesos_de_features(score_fn, train_fold, train_targets_fold)
-    # conseguir los indices que ordenarian a "pesos". Como argsort solo ordena en orden ascendente, damos vuelta el arreglo
+    # Conseguir los indices que ordenarian a "pesos". Como argsort solo ordena en orden ascendente,
+    # damos vuelta el arreglo
     indice_orden_desc_pesos = np.argsort(pesos_features)[::-1]
     if top_n == -1:
         top_n = train_fold.shape[1]
@@ -173,8 +175,10 @@ MAX_FEATURES = 150
 # Cantida de folds a usar en cross-val
 CANT_FOLDS_CV = 5
 
-# Transformar los targets en N columnas, 1 por cada categoria, donde la categoria correcta tiene un 1 y todas las demas columnas en esa fila tienen 0.
-# Dado que AUC se calcula sobre 2 categorias, Usamos esto luego para calcular 1 AUC por cada categoria
+# Transformar los targets en N columnas, 1 por cada categoria, donde la categoria correcta tiene
+# un 1 y todas las demas columnas en esa fila tienen 0.
+# Dado que AUC se calcula sobre 2 categorias, Usamos esto luego para calcular 1 AUC por cada
+# categoria
 targets_binarios_por_clase = label_binarize(targets, classes=range(0, n_categorias))
 
 # Hacer cross-validation
