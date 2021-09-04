@@ -209,9 +209,9 @@ for train_index, test_index in StratifiedKFold(
     test_fold = vectores[test_index]
     test_targets_fold = targets[test_index]
 
-    imprimir_features_con_pesos(
-        chi2, train_fold, train_targets_fold, nombres_features, MAX_FEATURES
-    )
+    #     imprimir_features_con_pesos(
+    #         chi2, train_fold, train_targets_fold, nombres_features, MAX_FEATURES
+    #     )
 
     # Seleccionar features a partir de los folds de entrenamiento
     selector_features = SelectKBest(score_func=chi2, k=MAX_FEATURES)
@@ -234,8 +234,8 @@ for train_index, test_index in StratifiedKFold(
             n_fold, train_fold.shape[0], test_fold_selected.shape[0]
         )
     )
-    print("FEATURES SELECCIONADAS:")
-    print(nombres_features_seleccionadas(selector_features, nombres_features))
+    #     print("FEATURES SELECCIONADAS:")
+    #     print(nombres_features_seleccionadas(selector_features, nombres_features))
 
     # Evaluar accuracy comparando las categorias reales con las predichas
     accuracy_fold = accuracy_score(test_targets_fold, preds_fold)
@@ -251,10 +251,10 @@ for train_index, test_index in StratifiedKFold(
         targets_binarios_por_clase[test_index],
     )
 
-    print("\tMatriz de confusion (filas=real, columnas=prediccion):")
-    mat_conf = confusion_matrix(test_targets_fold, preds_fold)
+    #     print("\tMatriz de confusion (filas=real, columnas=prediccion):")
+    #     mat_conf = confusion_matrix(test_targets_fold, preds_fold)
 
-    print(mat_conf)
+    #     print(mat_conf)
     n_fold += 1
 
-print("\nAccuracy promedio = {}".format(accuracy_promedio / n_fold))
+print("\nAccuracy promedio = {}".format(accuracy_promedio / (n_fold - 1)))
