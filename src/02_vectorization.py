@@ -33,13 +33,18 @@ from utils.tokenizers import tokenizador
 from sklearn.feature_extraction.text import CountVectorizer
 from typing import List
 
+data_from = '../data/01_raw/'
+data_to = '../data/02_processed/'
+# ventana, date_from, date_to = ['1', '2020-07', '2021-01']
+ventana, date_from, date_to = ['2', '2021-02', '2021-08']
+
 # %% [markdown]
 # ## Carga de datasets
 
 # %%
-df_el_mundo = pd.read_csv('../data/01_raw/df_noticias_el-mundo.csv')
-df_economia = pd.read_csv('../data/01_raw/df_noticias_economia.csv')
-df_sociedad = pd.read_csv('../data/01_raw/df_noticias_sociedad.csv')
+df_el_mundo = pd.read_csv(data_from + 'df_noticias_el-mundo.csv')
+df_economia = pd.read_csv(data_from + 'df_noticias_economia.csv')
+df_sociedad = pd.read_csv(data_from + 'df_noticias_sociedad.csv')
 
 df_el_mundo['fecha'] = pd.to_datetime(df_el_mundo['fecha'], format='%d/%m/%Y')
 df_economia['fecha'] = pd.to_datetime(df_economia['fecha'], format='%d/%m/%Y')
@@ -52,6 +57,7 @@ print(f'{df_noticias.shape[0]} noticias sin notas sin texto')
 df_noticias
 
 # %%
+df_noticias = df_noticias.sort_values(by='fecha').reset_index(drop=True)
 print('Fechas Mínimas')
 print(df_noticias[df_noticias['seccion'] == 'el-mundo']['fecha'].min())
 print(df_noticias[df_noticias['seccion'] == 'economia']['fecha'].min())
@@ -66,8 +72,8 @@ df_noticias.pivot_table(
 ).sort_index()
 
 # %%
-df_noticias = df_noticias[df_noticias['mes'] >= '2021-04']
-df_noticias = df_noticias[df_noticias['mes'] < '2021-09']
+df_noticias = df_noticias[df_noticias['mes'] >= date_from]
+df_noticias = df_noticias[df_noticias['mes'] <= date_to]
 
 # %%
 df_noticias.pivot_table(
@@ -106,9 +112,9 @@ MIN_NGRAMS = 1
 MAX_NGRAMS = 2
 
 # Nombre de datasets tratados
-VECTORS_FILE = '../data/02_processed/vectores.joblib'
-TARGETS_FILE = '../data/02_processed/targets.joblib'
-FEATURE_NAMES_FILE = '../data/02_processed/features.joblib'
+VECTORS_FILE = data_to + 'vectores_' + ventana + '.joblib'
+TARGETS_FILE = data_to + 'targets_' + ventana + '.joblib'
+FEATURE_NAMES_FILE = data_to + 'features_' + ventana + '.joblib'
 
 
 # %% [markdown]
@@ -149,12 +155,10 @@ todos_los_vectores = vectorizer.fit_transform(df_noticias['nota'])
 # guardar vectores de docs y la correspondiente categoria asignada a cada doc.
 joblib.dump(todos_los_vectores, VECTORS_FILE)
 
-joblib.dump(df_noticias['seccion'], TARGETS_FILE)
-
-print('Finalizado, el dataset está en {} y {}.'.format(VECTORS_FILE, TARGETS_FILE))
+joblib.dump(df_noticias[['mes', 'seccion']], TARGETS_FILE)
 
 nombres_features = vectorizer.get_feature_names()
 
 joblib.dump(nombres_features, FEATURE_NAMES_FILE)
 
-print('El nombre de cada columna de features esta en {}.'.format(FEATURE_NAMES_FILE))
+print(f'Finalizado! los datasets se encuentran en la carpeta {data_to}')
