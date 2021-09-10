@@ -32,14 +32,13 @@
 # %%
 import joblib
 
-# import matplotlib.pyplot as plt
-# import pandas as pd
-# import sklearn
-# import numpy as np
+import matplotlib.pyplot as plt
+import optuna
 
-# from sklearn.metrics import log_loss
-# from sklearn.svm import SVC
-# from sklearn.feature_selection import SequentialFeatureSelector
+from sklearn.svm import SVC
+from sklearn.feature_selection import RFECV
+from sklearn.feature_selection import SequentialFeatureSelector
+from sklearn.model_selection import StratifiedKFold
 
 data_from = '../data/02_processed/'
 data_to = '../data/03_models/'
@@ -165,7 +164,7 @@ learner = SVC(
 # Hiperparámetro a optimizar
 param = {'C': optuna.distributions.LogUniformDistribution(1e-10, 1e10)}
 
-# inicialización del experimento
+# Inicialización del experimento
 svc_search = optuna.integration.OptunaSearchCV(
     learner,
     param,
@@ -179,6 +178,7 @@ svc_search = optuna.integration.OptunaSearchCV(
 )
 
 # %%
+# %%time
 svc_search.fit(Xtrain_sel, ytrain)
 
 # %%
@@ -189,6 +189,7 @@ train_params = svc_search.best_params
 # # Entrenamiento de de modelo final
 
 # %%
+# %%time
 model = SVC(
     C=train_params['C'],
     kernel='linear',
