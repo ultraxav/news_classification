@@ -38,8 +38,6 @@ from sklearn.naive_bayes import MultinomialNB
 data_from = '../data/02_processed/'
 data_to = '../data/03_models/'
 
-seed = 1234
-
 walk1_train = ['2021-02', '2021-05']
 walk1_test = '2021-06'
 
@@ -100,9 +98,6 @@ y_test_w2 = nombres_targets[nombres_targets['mes'] == walk2_test]['seccion']
 
 X_test_w3 = vectores[nombres_targets['mes'] == walk3_test]
 y_test_w3 = nombres_targets[nombres_targets['mes'] == walk3_test]['seccion']
-
-# %%
-X_train_w1.shape
 
 # %% [markdown]
 # ## Modelo Baseline
