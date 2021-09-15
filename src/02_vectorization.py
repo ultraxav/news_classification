@@ -35,8 +35,7 @@ from typing import List
 
 data_from = '../data/01_raw/'
 data_to = '../data/02_processed/'
-# ventana, date_from, date_to = ['1', '2020-07', '2021-01']
-ventana, date_from, date_to = ['2', '2021-02', '2021-08']
+date_from, date_to = ['2021-02', '2021-08']
 
 # %% [markdown]
 # ## Carga de datasets
@@ -112,9 +111,9 @@ MIN_NGRAMS = 1
 MAX_NGRAMS = 2
 
 # Nombre de datasets tratados
-VECTORS_FILE = data_to + 'vectores_' + ventana + '.joblib'
-TARGETS_FILE = data_to + 'targets_' + ventana + '.joblib'
-FEATURE_NAMES_FILE = data_to + 'features_' + ventana + '.joblib'
+VECTORS_FILE = data_to + 'vectores.joblib'
+TARGETS_FILE = data_to + 'targets.joblib'
+FEATURE_NAMES_FILE = data_to + 'features.joblib'
 
 
 # %% [markdown]
