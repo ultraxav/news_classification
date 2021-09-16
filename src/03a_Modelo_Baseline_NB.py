@@ -33,6 +33,11 @@ import json
 import numpy as np
 import pandas as pd
 
+from sklearn.metrics import (
+    confusion_matrix,
+    ConfusionMatrixDisplay,
+    classification_report,
+)
 from sklearn.naive_bayes import MultinomialNB
 
 data_from = '../data/02_processed/'
@@ -170,3 +175,29 @@ print(json.dumps(nb_metrics, indent=4))
 
 # %%
 pd.DataFrame(nb_metrics).to_csv(data_to + 'nb_results.csv')
+
+# %%
+# Paso 1
+y_predicted1 = nb1.predict(X_test_w1)
+cm1 = confusion_matrix(y_test_w1, y_predicted1, labels=nb1.classes_)
+disp = ConfusionMatrixDisplay(confusion_matrix=cm1, display_labels=nb1.classes_)
+disp.plot()
+
+print("Métricas paso_1\n\n" + classification_report(y_test_w1, y_predicted1))
+
+# %%
+# Paso 2
+y_predicted2 = nb2.predict(X_test_w2)
+cm2 = confusion_matrix(y_test_w2, y_predicted2, labels=nb2.classes_)
+disp = ConfusionMatrixDisplay(confusion_matrix=cm2, display_labels=nb2.classes_)
+disp.plot()
+
+print(f"Métricas paso_2\n\n" + classification_report(y_test_w2, y_predicted2))
+
+# %%
+# Paso 3
+y_predicted3 = nb3.predict(X_test_w3)
+cm3 = confusion_matrix(y_test_w3, y_predicted3, labels=nb3.classes_)
+disp = ConfusionMatrixDisplay(confusion_matrix=cm3, display_labels=nb3.classes_)
+disp.plot()
+print(f"Métricas paso_3\n\n" + classification_report(y_test_w3, y_predicted3))
