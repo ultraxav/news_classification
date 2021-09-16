@@ -17,9 +17,11 @@
 # %% [markdown]
 # # SVC Model - Feature importance and selection, Optimization and Training
 #
-# Fechas de venatana temporal 1:
-# * Desde: 2020-07
-# * Hasta: 2021-01
+# El objetivo de este notebook es entrenar un modelo SVC para clasificación de noticias, se experimentarán con distintas herramientas para conocer el performance y las potenciabilidades de dicho modelo, tal cuales son:
+#
+# * Selección de variables
+# * Entrenamiento
+# * Optimización Bayesiana
 #
 # ## Integrantes:
 #
@@ -31,127 +33,344 @@
 
 # %%
 import joblib
-
+import json
 import matplotlib.pyplot as plt
+import numpy as np
 import optuna
+import pandas as pd
 
-from sklearn.svm import SVC
-from sklearn.feature_selection import RFECV
-from sklearn.feature_selection import SequentialFeatureSelector
+from sklearn.feature_selection import SelectKBest, chi2
+from sklearn.metrics import (
+    confusion_matrix,
+    ConfusionMatrixDisplay,
+    classification_report,
+)
 from sklearn.model_selection import StratifiedKFold
+from sklearn.svm import SVC
+from tqdm import tqdm
 
 data_from = '../data/02_processed/'
 data_to = '../data/03_models/'
-ventana = '1'
-
-train_date = '2020-07'
-test_date = '2021-01'
 
 seed = 1234
+
+walk1_train = ['2021-02', '2021-05']
+walk1_test = '2021-06'
+
+walk2_train = ['2021-03', '2021-06']
+walk2_test = '2021-07'
+
+walk3_train = ['2021-04', '2021-07']
+walk3_test = '2021-08'
 
 # %% [markdown]
 # ## Carga de Datos
 
 # %%
-vectores = joblib.load(data_from + 'vectores_' + ventana + '.joblib')
-nombres_targets = joblib.load(data_from + 'targets_' + ventana + '.joblib')
-nombres_features = joblib.load(data_from + 'features_' + ventana + '.joblib')
+vectores = joblib.load(data_from + 'vectores.joblib')
+nombres_targets = joblib.load(data_from + 'targets.joblib')
+nombres_features = joblib.load(data_from + 'features.joblib')
 
 nombres_targets['seccion'] = nombres_targets['seccion'].replace(
     {'sociedad': 0, 'economia': 1, 'el-mundo': 2}
 )
 
-Xtrain = vectores[nombres_targets['mes'] <= train_date]
-ytrain = nombres_targets[nombres_targets['mes'] <= train_date]['seccion']
+# %% [markdown]
+# ## Armado de Datasets
 
 # %%
-len(nombres_features) * 0.10
+X_train_w1 = vectores[
+    (nombres_targets['mes'] >= walk1_train[0])
+    & (nombres_targets['mes'] <= walk1_train[1])
+]
+y_train_w1 = nombres_targets[
+    (nombres_targets['mes'] >= walk1_train[0])
+    & (nombres_targets['mes'] <= walk1_train[1])
+]['seccion']
+
+X_train_w2 = vectores[
+    (nombres_targets['mes'] >= walk2_train[0])
+    & (nombres_targets['mes'] <= walk2_train[1])
+]
+y_train_w2 = nombres_targets[
+    (nombres_targets['mes'] >= walk2_train[0])
+    & (nombres_targets['mes'] <= walk2_train[1])
+]['seccion']
+
+X_train_w3 = vectores[
+    (nombres_targets['mes'] >= walk3_train[0])
+    & (nombres_targets['mes'] <= walk3_train[1])
+]
+y_train_w3 = nombres_targets[
+    (nombres_targets['mes'] >= walk3_train[0])
+    & (nombres_targets['mes'] <= walk3_train[1])
+]['seccion']
+
+X_test_w1 = vectores[nombres_targets['mes'] == walk1_test]
+y_test_w1 = nombres_targets[nombres_targets['mes'] == walk1_test]['seccion']
+
+X_test_w2 = vectores[nombres_targets['mes'] == walk2_test]
+y_test_w2 = nombres_targets[nombres_targets['mes'] == walk2_test]['seccion']
+
+X_test_w3 = vectores[nombres_targets['mes'] == walk3_test]
+y_test_w3 = nombres_targets[nombres_targets['mes'] == walk3_test]['seccion']
 
 # %% [markdown]
-# # Recursive Feature Selection
+# ## Modelo Baseline
 #
-# El objetivo de esta sección es explorar la eliminación recursiva de features que no aportan a la ganancia final del modelo.
-# Se utlilizarán únicamente los datos de train.
-#
-# > Given an external estimator that assigns weights to features (e.g., the coefficients of a linear model), the goal of recursive feature elimination (RFE) is to select features by recursively considering smaller and smaller sets of features. First, the estimator is trained on the initial set of features and the importance of each feature is obtained either through any specific attribute or callable. Then, the least important features are pruned from current set of features. That procedure is recursively repeated on the pruned set until the desired number of features to select is eventually reached. **Scikit-Learn**
-#
-# https://scikit-learn.org/stable/modules/generated/sklearn.feature_selection.RFECV.html
+# Entrenamiento de un SVC con todas las variables, y en distintas ventanas de tiempo
 
 # %%
-# Se crea un modelo sin entonar, el razonamiento es el siguiente, si una variable es altamente
-# predictora, figurará como predictora aún cuando el modelo es sencillo
-learner = SVC(
+# Paso 1
+svc1 = SVC(
     kernel='linear', probability=True, class_weight='balanced', random_state=seed
 )
+svc1.fit(X_train_w1, y_train_w1)
 
-# Continuar la búsuqeda hasta quedarse con una sola variable
-min_features_to_select = 1
-
-# Catidad de variables a eliminar en cada ronda (Se seleccionó aprox. el 10%)
-step = 20000
-
-rfecv_svc = RFECV(
-    estimator=learner,
-    step=step,
-    cv=StratifiedKFold(3, random_state=seed),
-    scoring='neg_log_loss',
-    min_features_to_select=min_features_to_select,
-    n_jobs=-1,
-)
+svc1_score_train = svc1.score(X_train_w1, y_train_w1)
+svc1_score_test = svc1.score(X_test_w1, y_test_w1)
 
 # %%
-# %%time
-rfecv_svc.fit(Xtrain, ytrain)
+# Paso 2
+svc2 = SVC(
+    kernel='linear', probability=True, class_weight='balanced', random_state=seed
+)
+svc2.fit(X_train_w2, y_train_w2)
+
+svc2_score_train = svc2.score(X_train_w2, y_train_w2)
+svc2_score_test = svc2.score(X_test_w2, y_test_w2)
+
+# %%
+# Paso 3
+svc3 = SVC(
+    kernel='linear', probability=True, class_weight='balanced', random_state=seed
+)
+svc3.fit(X_train_w3, y_train_w3)
+
+svc3_score_train = svc3.score(X_train_w3, y_train_w3)
+svc3_score_test = svc3.score(X_test_w3, y_test_w3)
+
+# %%
+svc_baseline_metrics = {
+    'paso_1': {
+        'train_size': X_train_w1.shape[0],
+        'test_size': X_test_w1.shape[0],
+        'train_from': walk1_train[0],
+        'train_to': walk1_train[1],
+        'test_month': walk1_test,
+        'train_accuracy': svc1_score_train,
+        'test_accuracy': svc1_score_test,
+    },
+    'paso_2': {
+        'train_size': X_train_w2.shape[0],
+        'test_size': X_test_w2.shape[0],
+        'train_from': walk2_train[0],
+        'train_to': walk2_train[1],
+        'test_month': walk2_test,
+        'train_accuracy': svc2_score_train,
+        'test_accuracy': svc2_score_test,
+    },
+    'paso_3': {
+        'train_size': X_train_w3.shape[0],
+        'test_size': X_test_w3.shape[0],
+        'train_from': walk3_train[0],
+        'train_to': walk3_train[1],
+        'test_month': walk3_test,
+        'train_accuracy': svc3_score_train,
+        'test_accuracy': svc3_score_test,
+    },
+    'average_accuracy': {
+        'train_accuracy': np.mean(
+            [svc1_score_train, svc2_score_train, svc3_score_train]
+        ),
+        'test_accuracy': np.mean([svc1_score_test, svc2_score_test, svc3_score_test]),
+    },
+}
+
+print(json.dumps(svc_baseline_metrics, indent=4))
+
+# %%
+pd.DataFrame(svc_baseline_metrics).to_csv(data_to + 'svc_baseline_metrics.csv')
+
+# %%
+# Paso 1
+y_predicted1 = svc1.predict(X_test_w1)
+cm1 = confusion_matrix(y_test_w1, y_predicted1, labels=svc1.classes_)
+disp = ConfusionMatrixDisplay(
+    confusion_matrix=cm1, display_labels=['sociedad', 'economia', 'el-mundo']
+)
+disp.plot()
+
+print("Métricas paso_1\n\n" + classification_report(y_test_w1, y_predicted1))
+
+# %%
+# Paso 2
+y_predicted2 = svc1.predict(X_test_w2)
+cm2 = confusion_matrix(y_test_w2, y_predicted2, labels=svc2.classes_)
+disp = ConfusionMatrixDisplay(
+    confusion_matrix=cm2, display_labels=['sociedad', 'economia', 'el-mundo']
+)
+disp.plot()
+
+print("Métricas paso_2\n\n" + classification_report(y_test_w2, y_predicted2))
+
+# %%
+# Paso 3
+y_predicted3 = svc1.predict(X_test_w3)
+cm3 = confusion_matrix(y_test_w3, y_predicted3, labels=svc3.classes_)
+disp = ConfusionMatrixDisplay(
+    confusion_matrix=cm3, display_labels=['sociedad', 'economia', 'el-mundo']
+)
+disp.plot()
+
+print("Métricas paso_3\n\n" + classification_report(y_test_w3, y_predicted3))
 
 # %% [markdown]
-# inspección visual y seleccion de cantidad de variables importantes
+# ## Importancia de Variables
+#
+# ### 1ra vuelta
 
 # %%
-print(f'Optimal number of features: {rfecv_svc.n_features_}')
+df_results_1 = pd.DataFrame(columns=['percent_selected', 'accuracy'])
 
-plt.figure(figsize=(10, 8))
-plt.xlabel('Number of features selected')
-plt.ylabel('Cross validation score (Negative Log Loss)')
-plt.plot(
-    range(min_features_to_select, len(rfecv_svc.grid_scores_) + min_features_to_select),
-    rfecv_svc.grid_scores_,
-)
+# %%
+for i in tqdm(range(1, 101, 1)):
+    svc1 = SVC(
+        kernel='linear', probability=True, class_weight='balanced', random_state=seed
+    )
+    percent = i / 100
+    selector_features = SelectKBest(
+        score_func=chi2, k=int(len(nombres_features) * percent)
+    )
+    selector_features.fit(X_train_w1, y_train_w1)
 
+    train_selected = selector_features.transform(X_train_w1)
+    test_selected = selector_features.transform(X_test_w1)
+
+    selector_features.get_support()
+
+    svc1.fit(train_selected, y_train_w1)
+
+    acc_score = svc1.score(test_selected, y_test_w1)
+
+    result = {
+        'percent_selected': i,
+        'accuracy': acc_score,
+    }
+
+    df_results_1 = df_results_1.append(result, ignore_index=True)
+
+
+# %%
+# df_results_1.to_csv(data_to + 'df_feature_results_1.csv', index=False)
+
+# %%
+plt.figure()
+plt.xlabel('Percent of features selected')
+plt.ylabel('Accuracy')
+plt.plot('percent_selected', 'accuracy', data=df_results_1)
 plt.show()
 
 # %% [markdown]
-# # Sequential Feature Selector
-#
-# Ya sabiendo la cantidad de variables utilizaremos este algoritmo para obtener los nombres de las variables seleccionadas
-#
-# > This Sequential Feature Selector adds (forward selection) or removes (backward selection) features to form a feature subset in a greedy fashion. At each stage, this estimator chooses the best feature to add or remove based on the cross-validation score of an estimator. **Scikit-Learn**
-#
-# https://scikit-learn.org/stable/modules/generated/sklearn.feature_selection.SequentialFeatureSelector.html
+# ### 2da vuelta
 
 # %%
-learner = SVC(
-    kernel='linear', probability=True, class_weight='balanced', random_state=seed
-)
-
-# Buscará las 30000 variables más importantes
-n_features_to_select = 30000
-
-sfscv_svc = SequentialFeatureSelector(
-    estimator=learner,
-    n_features_to_select=n_features_to_select,
-    direction='backward',
-    scoring='neg_log_loss',
-    cv=StratifiedKFold(3, random_state=seed),
-    n_jobs=-1,
-)
+df_results_2 = pd.DataFrame(columns=['percent_selected', 'accuracy'])
 
 # %%
-# %%time
-sfscv_svc.fit(Xtrain, ytrain)
+for i in tqdm(range(1, 100, 1)):
+    svc1 = SVC(
+        kernel='linear', probability=True, class_weight='balanced', random_state=seed
+    )
+    percent = i / 1000
+    selector_features = SelectKBest(
+        score_func=chi2, k=int(len(nombres_features) * percent)
+    )
+    selector_features.fit(X_train_w1, y_train_w1)
+
+    train_selected = selector_features.transform(X_train_w1)
+    test_selected = selector_features.transform(X_test_w1)
+
+    selector_features.get_support()
+
+    svc1.fit(train_selected, y_train_w1)
+
+    acc_score = svc1.score(test_selected, y_test_w1)
+
+    result = {
+        'percent_selected': percent,
+        'accuracy': acc_score,
+    }
+
+    df_results_2 = df_results_2.append(result, ignore_index=True)
 
 # %%
-Xtrain_sel = Xtrain[sfscv_svc.get_support()]
-Xnames_sel = nombres_features[sfscv_svc.get_support()]
+# df_results_2.to_csv(data_to + 'df_feature_results_2.csv', index=False)
+
+# %%
+plt.figure()
+plt.xlabel('Percent of features selected')
+plt.ylabel('Accuracy')
+plt.plot('percent_selected', 'accuracy', data=df_results_2)
+plt.show()
+
+# %% [markdown]
+# ### 3ra vuelta
+
+# %%
+df_results_3 = pd.DataFrame(columns=['percent_selected', 'accuracy'])
+
+# %%
+for i in tqdm(range(1, 100, 1)):
+    svc1 = SVC(
+        kernel='linear', probability=True, class_weight='balanced', random_state=seed
+    )
+    percent = i / 10000
+    selector_features = SelectKBest(
+        score_func=chi2, k=int(len(nombres_features) * percent)
+    )
+    selector_features.fit(X_train_w1, y_train_w1)
+
+    train_selected = selector_features.transform(X_train_w1)
+    test_selected = selector_features.transform(X_test_w1)
+
+    selector_features.get_support()
+
+    svc1.fit(train_selected, y_train_w1)
+
+    acc_score = svc1.score(test_selected, y_test_w1)
+
+    result = {
+        'percent_selected': percent,
+        'accuracy': acc_score,
+    }
+
+    df_results_3 = df_results_3.append(result, ignore_index=True)
+
+# %%
+# df_results_3.to_csv(data_to + 'df_feature_results_3.csv', index=False)
+
+# %%
+plt.figure()
+plt.xlabel('Percent of features selected')
+plt.ylabel('Accuracy')
+plt.plot('percent_selected', 'accuracy', data=df_results_3)
+plt.show()
+
+# %%
+df_results = pd.concat([df_results_1, df_results_2, df_results_3])
+df_results = df_results.sort_values(by='percent_selected').reset_index(drop=True)
+df_results
+
+# %%
+plt.figure(figsize=(15, 10))
+plt.xlabel('Percent of features selected')
+plt.ylabel('Accuracy')
+plt.plot('percent_selected', 'accuracy', data=df_results)
+plt.show()
+
+# %%
+df_results.to_csv(data_to + 'df_feature_results.csv', index=False)
 
 # %% [markdown]
 # # Optimización Bayesiana
@@ -168,37 +387,167 @@ param = {'C': optuna.distributions.LogUniformDistribution(1e-10, 1e10)}
 svc_search = optuna.integration.OptunaSearchCV(
     learner,
     param,
-    cv=StratifiedKFold(3, random_state=seed),
+    cv=StratifiedKFold(),
     n_jobs=-1,
     n_trials=100,
     random_state=seed,
     study=optuna.create_study(
-        study_name='news_svc', direction='maximaze', storage='sqlite:///news_svc.db'
+        study_name='news_svc', direction='maximize', storage='sqlite:///news_svc.db'
     ),
 )
 
 # %%
+selector_features = SelectKBest(score_func=chi2, k=500)
+selector_features.fit(X_train_w1, y_train_w1)
+
+train_selected_w1 = selector_features.transform(X_train_w1)
+test_selected_w1 = selector_features.transform(X_test_w1)
+
+# %%
 # %%time
-svc_search.fit(Xtrain_sel, ytrain)
+svc_search.fit(train_selected_w1, y_train_w1)
 
 # %%
 study = svc_search.study
-train_params = svc_search.best_params
+train_params = svc_search.best_params_
+train_params
 
 # %% [markdown]
-# # Entrenamiento de de modelo final
+# # Entrenamiento de de modelos finales
 
 # %%
-# %%time
-model = SVC(
+# Paso 1
+selector_features = SelectKBest(score_func=chi2, k=500)
+selector_features.fit(X_train_w1, y_train_w1)
+
+train_selected_w1 = selector_features.transform(X_train_w1)
+test_selected_w1 = selector_features.transform(X_test_w1)
+
+svc1 = SVC(
     C=train_params['C'],
     kernel='linear',
     probability=True,
     class_weight='balanced',
     random_state=seed,
 )
+svc1.fit(train_selected_w1, y_train_w1)
+
+svc1_score_train = svc1.score(train_selected_w1, y_train_w1)
+svc1_score_test = svc1.score(test_selected_w1, y_test_w1)
 
 # %%
-joblib.dump(learner, data_to + 'learner_svc_' + ventana + '.joblib')
-joblib.dump(study, data_to + 'study_svc_' + ventana + '.joblib')
-joblib.dump(model, data_to + 'model_svc_' + ventana + '.joblib')
+# Paso 2
+selector_features = SelectKBest(score_func=chi2, k=500)
+selector_features.fit(X_train_w2, y_train_w2)
+
+train_selected_w2 = selector_features.transform(X_train_w2)
+test_selected_w2 = selector_features.transform(X_test_w2)
+
+svc2 = SVC(
+    C=train_params['C'],
+    kernel='linear',
+    probability=True,
+    class_weight='balanced',
+    random_state=seed,
+)
+svc2.fit(train_selected_w2, y_train_w2)
+
+svc2_score_train = svc2.score(train_selected_w2, y_train_w2)
+svc2_score_test = svc2.score(test_selected_w2, y_test_w2)
+
+# %%
+# Paso 3
+selector_features = SelectKBest(score_func=chi2, k=500)
+selector_features.fit(X_train_w3, y_train_w3)
+
+train_selected_w3 = selector_features.transform(X_train_w3)
+test_selected_w3 = selector_features.transform(X_test_w3)
+
+svc3 = SVC(
+    C=train_params['C'],
+    kernel='linear',
+    probability=True,
+    class_weight='balanced',
+    random_state=seed,
+)
+svc3.fit(train_selected_w3, y_train_w3)
+
+svc3_score_train = svc3.score(train_selected_w3, y_train_w3)
+svc3_score_test = svc3.score(test_selected_w3, y_test_w3)
+
+# %%
+svc_final_metrics = {
+    'paso_1': {
+        'train_size': X_train_w1.shape[0],
+        'test_size': X_test_w1.shape[0],
+        'train_from': walk1_train[0],
+        'train_to': walk1_train[1],
+        'test_month': walk1_test,
+        'train_accuracy': svc1_score_train,
+        'test_accuracy': svc1_score_test,
+    },
+    'paso_2': {
+        'train_size': X_train_w2.shape[0],
+        'test_size': X_test_w2.shape[0],
+        'train_from': walk2_train[0],
+        'train_to': walk2_train[1],
+        'test_month': walk2_test,
+        'train_accuracy': svc2_score_train,
+        'test_accuracy': svc2_score_test,
+    },
+    'paso_3': {
+        'train_size': X_train_w3.shape[0],
+        'test_size': X_test_w3.shape[0],
+        'train_from': walk3_train[0],
+        'train_to': walk3_train[1],
+        'test_month': walk3_test,
+        'train_accuracy': svc3_score_train,
+        'test_accuracy': svc3_score_test,
+    },
+    'average_accuracy': {
+        'train_accuracy': np.mean(
+            [svc1_score_train, svc2_score_train, svc3_score_train]
+        ),
+        'test_accuracy': np.mean([svc1_score_test, svc2_score_test, svc3_score_test]),
+    },
+}
+
+print(json.dumps(svc_final_metrics, indent=4))
+
+# %%
+pd.DataFrame(svc_final_metrics).to_csv(data_to + 'svc_final_metrics.csv')
+
+# %%
+# Paso 1
+y_predicted1 = svc1.predict(test_selected_w1)
+cm1 = confusion_matrix(y_test_w1, y_predicted1, labels=svc1.classes_)
+disp = ConfusionMatrixDisplay(
+    confusion_matrix=cm1, display_labels=['sociedad', 'economia', 'el-mundo']
+)
+disp.plot()
+
+print("Métricas paso_1\n\n" + classification_report(y_test_w1, y_predicted1))
+
+# %%
+# Paso 2
+y_predicted2 = svc2.predict(test_selected_w2)
+cm2 = confusion_matrix(y_test_w2, y_predicted2, labels=svc2.classes_)
+disp = ConfusionMatrixDisplay(
+    confusion_matrix=cm2, display_labels=['sociedad', 'economia', 'el-mundo']
+)
+disp.plot()
+
+print("Métricas paso_2\n\n" + classification_report(y_test_w2, y_predicted2))
+
+# %%
+# Paso 3
+y_predicted3 = svc3.predict(test_selected_w3)
+cm3 = confusion_matrix(y_test_w3, y_predicted3, labels=svc3.classes_)
+disp = ConfusionMatrixDisplay(
+    confusion_matrix=cm3, display_labels=['sociedad', 'economia', 'el-mundo']
+)
+disp.plot()
+
+print("Métricas paso_3\n\n" + classification_report(y_test_w3, y_predicted3))
+
+# %%
