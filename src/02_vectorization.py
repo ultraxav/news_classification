@@ -35,7 +35,7 @@ from typing import List
 
 data_from = '../data/01_raw/'
 data_to = '../data/02_processed/'
-date_from, date_to = ['2021-02', '2021-08']
+date_from, date_to = ['2020-08', '2021-08']
 
 # %% [markdown]
 # ## Carga de datasets
