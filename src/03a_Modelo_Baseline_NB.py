@@ -30,6 +30,7 @@
 # %%
 import joblib
 import json
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
@@ -43,15 +44,6 @@ from sklearn.naive_bayes import MultinomialNB
 data_from = '../data/02_processed/'
 data_to = '../data/03_models/'
 
-walk1_train = ['2021-02', '2021-05']
-walk1_test = '2021-06'
-
-walk2_train = ['2021-03', '2021-06']
-walk2_test = '2021-07'
-
-walk3_train = ['2021-04', '2021-07']
-walk3_test = '2021-08'
-
 # %% [markdown]
 # ## Carga de Datos
 
@@ -64,146 +56,109 @@ nombres_targets['seccion'] = nombres_targets['seccion'].replace(
     {'sociedad': 0, 'economia': 1, 'el-mundo': 2}
 )
 
-# %% [markdown]
-# ## Armado de Datasets
-
-# %%
-X_train_w1 = vectores[
-    (nombres_targets['mes'] >= walk1_train[0])
-    & (nombres_targets['mes'] <= walk1_train[1])
-]
-y_train_w1 = nombres_targets[
-    (nombres_targets['mes'] >= walk1_train[0])
-    & (nombres_targets['mes'] <= walk1_train[1])
-]['seccion']
-
-X_train_w2 = vectores[
-    (nombres_targets['mes'] >= walk2_train[0])
-    & (nombres_targets['mes'] <= walk2_train[1])
-]
-y_train_w2 = nombres_targets[
-    (nombres_targets['mes'] >= walk2_train[0])
-    & (nombres_targets['mes'] <= walk2_train[1])
-]['seccion']
-
-X_train_w3 = vectores[
-    (nombres_targets['mes'] >= walk3_train[0])
-    & (nombres_targets['mes'] <= walk3_train[1])
-]
-y_train_w3 = nombres_targets[
-    (nombres_targets['mes'] >= walk3_train[0])
-    & (nombres_targets['mes'] <= walk3_train[1])
-]['seccion']
-
-X_test_w1 = vectores[nombres_targets['mes'] == walk1_test]
-y_test_w1 = nombres_targets[nombres_targets['mes'] == walk1_test]['seccion']
-
-X_test_w2 = vectores[nombres_targets['mes'] == walk2_test]
-y_test_w2 = nombres_targets[nombres_targets['mes'] == walk2_test]['seccion']
-
-X_test_w3 = vectores[nombres_targets['mes'] == walk3_test]
-y_test_w3 = nombres_targets[nombres_targets['mes'] == walk3_test]['seccion']
+meses = nombres_targets['mes'].unique()
+meses
 
 # %% [markdown]
-# ## Modelo Baseline
+# ## Armado de Datasets y entrenamiento de Modelo Baseline
 #
 # Este modelo consiste en un clasificador bayesiano con la totalidad del dataset
 
 # %%
-# Paso 1
-nb1 = MultinomialNB()
-nb1.fit(X_train_w1, y_train_w1)
+nb_metrics = {}
 
-nb1_score_train = nb1.score(X_train_w1, y_train_w1)
-nb1_score_test = nb1.score(X_test_w1, y_test_w1)
+for i in range(3, 7, 1):
+    X_train = vectores[nombres_targets['mes'].isin(meses[:i])]
+    y_train = nombres_targets[nombres_targets['mes'].isin(meses[:i])]['seccion']
 
-# %%
-# Paso 2
-nb2 = MultinomialNB()
-nb2.fit(X_train_w2, y_train_w2)
+    nbc = MultinomialNB()
+    nbc.fit(X_train, y_train)
 
-nb2_score_train = nb2.score(X_train_w2, y_train_w2)
-nb2_score_test = nb2.score(X_test_w2, y_test_w2)
+    nb_metrics['train' + str(i)] = {}
 
-# %%
-# Paso 3
-nb3 = MultinomialNB()
-nb3.fit(X_train_w3, y_train_w3)
+    nb_metrics['train' + str(i)]['train_with'] = str(i) + ' months'
+    nb_metrics['train' + str(i)]['train_from'] = str(meses[0])
+    nb_metrics['train' + str(i)]['train_to'] = str(meses[i])
 
-nb3_score_train = nb3.score(X_train_w3, y_train_w3)
-nb3_score_test = nb3.score(X_test_w3, y_test_w3)
+    nb_metrics['train' + str(i)]['train_size'] = X_train.shape[0]
+    nb_metrics['train' + str(i)]['train_score'] = nbc.score(X_train, y_train)
+
+    test_scores = []
+    for j in range(len(meses[:i]), len(meses), 1):
+        X_test = vectores[nombres_targets['mes'] == meses[j]]
+        y_test = nombres_targets[nombres_targets['mes'] == meses[j]]['seccion']
+
+        test_scores.append(nbc.score(X_test, y_test))
+
+    nb_metrics['train' + str(i)]['test_scores'] = test_scores
+
+    nb_metrics['train' + str(i)]['test_score_mean'] = np.mean(test_scores)
 
 # %% [markdown]
 # ## Metricas
 
 # %%
-nb_metrics = {
-    'paso_1': {
-        'train_size': X_train_w1.shape[0],
-        'test_size': X_test_w1.shape[0],
-        'train_from': walk1_train[0],
-        'train_to': walk1_train[1],
-        'test_month': walk1_test,
-        'train_accuracy': nb1_score_train,
-        'test_accuracy': nb1_score_test,
-    },
-    'paso_2': {
-        'train_size': X_train_w2.shape[0],
-        'test_size': X_test_w2.shape[0],
-        'train_from': walk2_train[0],
-        'train_to': walk2_train[1],
-        'test_month': walk2_test,
-        'train_accuracy': nb2_score_train,
-        'test_accuracy': nb2_score_test,
-    },
-    'paso_3': {
-        'train_size': X_train_w3.shape[0],
-        'test_size': X_test_w3.shape[0],
-        'train_from': walk3_train[0],
-        'train_to': walk3_train[1],
-        'test_month': walk3_test,
-        'train_accuracy': nb3_score_train,
-        'test_accuracy': nb3_score_test,
-    },
-    'average_accuracy': {
-        'train_accuracy': np.mean([nb1_score_train, nb2_score_train, nb3_score_train]),
-        'test_accuracy': np.mean([nb1_score_test, nb2_score_test, nb3_score_test]),
-    },
-}
+with open(data_to + 'nb_metrics.json', 'w') as fp:
+    json.dump(nb_metrics, fp, indent=4)
 
 print(json.dumps(nb_metrics, indent=4))
 
-# %%
-pd.DataFrame(nb_metrics).to_csv(data_to + 'nb_results.csv')
+# %% [markdown]
+# ## Degradación del Accuracy
 
 # %%
-# Paso 1
-y_predicted1 = nb1.predict(X_test_w1)
-cm1 = confusion_matrix(y_test_w1, y_predicted1, labels=nb1.classes_)
-disp = ConfusionMatrixDisplay(
+# data
+plt.plot(nb_metrics['train3']['test_scores'], label='train3')
+plt.plot(nb_metrics['train4']['test_scores'], label='train4')
+plt.plot(nb_metrics['train5']['test_scores'], label='train5')
+plt.plot(nb_metrics['train6']['test_scores'], label='train6')
+
+# format
+plt.title('Degradación del Accuracy')
+plt.ylabel('Accuracy')
+plt.ylim(0.8, 1)
+plt.xlabel('Cantidad de meses después del entrenamiento')
+
+# plot
+plt.legend()
+plt.show()
+
+# %% [markdown]
+# ## Entrenamiento de modelo final
+
+# %%
+X_train = vectores[nombres_targets['mes'].isin(meses[:4])]
+y_train = nombres_targets[nombres_targets['mes'].isin(meses[:4])]['seccion']
+
+X_test = vectores[nombres_targets['mes'] == meses[-1]]
+y_test = nombres_targets[nombres_targets['mes'] == meses[-1]]['seccion']
+
+nbc = MultinomialNB()
+nbc.fit(X_train, y_train)
+
+# %%
+# train
+y_predicted_train = nbc.predict(X_train)
+cm1 = confusion_matrix(y_train, y_predicted_train, normalize='true')
+disp1 = ConfusionMatrixDisplay(
     confusion_matrix=cm1, display_labels=['sociedad', 'economia', 'el-mundo']
 )
-disp.plot()
+disp1.plot()
 
-print("Métricas paso_1\n\n" + classification_report(y_test_w1, y_predicted1))
+print(
+    f'Métricas en Entrenamiento\n\n' + classification_report(y_train, y_predicted_train)
+)
 
 # %%
-# Paso 2
-y_predicted2 = nb2.predict(X_test_w2)
-cm2 = confusion_matrix(y_test_w2, y_predicted2, labels=nb2.classes_)
-disp = ConfusionMatrixDisplay(
+# Test on farthest away month
+y_predicted_test = nbc.predict(X_test)
+cm2 = confusion_matrix(y_test, y_predicted_test, normalize='true')
+disp2 = ConfusionMatrixDisplay(
     confusion_matrix=cm2, display_labels=['sociedad', 'economia', 'el-mundo']
 )
-disp.plot()
+disp2.plot()
 
-print(f"Métricas paso_2\n\n" + classification_report(y_test_w2, y_predicted2))
-
-# %%
-# Paso 3
-y_predicted3 = nb3.predict(X_test_w3)
-cm3 = confusion_matrix(y_test_w3, y_predicted3, labels=nb3.classes_)
-disp = ConfusionMatrixDisplay(
-    confusion_matrix=cm3, display_labels=['sociedad', 'economia', 'el-mundo']
+print(
+    f'Métricas en mes más lejano ({meses[-1]}):\n\n'
+    + classification_report(y_test, y_predicted_test)
 )
-disp.plot()
-print(f"Métricas paso_3\n\n" + classification_report(y_test_w3, y_predicted3))
