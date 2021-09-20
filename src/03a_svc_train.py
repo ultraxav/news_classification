@@ -54,15 +54,6 @@ data_to = '../data/03_models/'
 
 seed = 1234
 
-walk1_train = ['2021-02', '2021-05']
-walk1_test = '2021-06'
-
-walk2_train = ['2021-03', '2021-06']
-walk2_test = '2021-07'
-
-walk3_train = ['2021-04', '2021-07']
-walk3_test = '2021-08'
-
 # %% [markdown]
 # ## Carga de Datos
 
@@ -75,183 +66,114 @@ nombres_targets['seccion'] = nombres_targets['seccion'].replace(
     {'sociedad': 0, 'economia': 1, 'el-mundo': 2}
 )
 
-# %% [markdown]
-# ## Armado de Datasets
+meses = nombres_targets['mes'].unique()
 
 # %%
-X_train_w1 = vectores[
-    (nombres_targets['mes'] >= walk1_train[0])
-    & (nombres_targets['mes'] <= walk1_train[1])
-]
-y_train_w1 = nombres_targets[
-    (nombres_targets['mes'] >= walk1_train[0])
-    & (nombres_targets['mes'] <= walk1_train[1])
-]['seccion']
-
-X_train_w2 = vectores[
-    (nombres_targets['mes'] >= walk2_train[0])
-    & (nombres_targets['mes'] <= walk2_train[1])
-]
-y_train_w2 = nombres_targets[
-    (nombres_targets['mes'] >= walk2_train[0])
-    & (nombres_targets['mes'] <= walk2_train[1])
-]['seccion']
-
-X_train_w3 = vectores[
-    (nombres_targets['mes'] >= walk3_train[0])
-    & (nombres_targets['mes'] <= walk3_train[1])
-]
-y_train_w3 = nombres_targets[
-    (nombres_targets['mes'] >= walk3_train[0])
-    & (nombres_targets['mes'] <= walk3_train[1])
-]['seccion']
-
-X_test_w1 = vectores[nombres_targets['mes'] == walk1_test]
-y_test_w1 = nombres_targets[nombres_targets['mes'] == walk1_test]['seccion']
-
-X_test_w2 = vectores[nombres_targets['mes'] == walk2_test]
-y_test_w2 = nombres_targets[nombres_targets['mes'] == walk2_test]['seccion']
-
-X_test_w3 = vectores[nombres_targets['mes'] == walk3_test]
-y_test_w3 = nombres_targets[nombres_targets['mes'] == walk3_test]['seccion']
+len(nombres_features)
 
 # %% [markdown]
-# ## Modelo Baseline
+# ## Armado de Datasets y entrenamiento de Modelo Baseline
 #
-# Entrenamiento de un SVC con todas las variables, y en distintas ventanas de tiempo
+# Entrenamiento de un SVC con todas las variables como punto de referencia.
+#
+# Datos de entrenamiento desde 2020-07 hasta 2020-10
 
 # %%
-# Paso 1
-svc1 = SVC(
-    kernel='linear', probability=True, class_weight='balanced', random_state=seed
-)
-svc1.fit(X_train_w1, y_train_w1)
+# %%time
+svc_baseline_metrics = {}
 
-svc1_score_train = svc1.score(X_train_w1, y_train_w1)
-svc1_score_test = svc1.score(X_test_w1, y_test_w1)
+i = 4
+
+X_train = vectores[nombres_targets['mes'].isin(meses[:i])]
+y_train = nombres_targets[nombres_targets['mes'].isin(meses[:i])]['seccion']
+
+svc = SVC(kernel='linear', probability=True, class_weight='balanced', random_state=seed)
+svc.fit(X_train, y_train)
+
+svc_baseline_metrics['train_base'] = {}
+
+svc_baseline_metrics['train_base']['train_with'] = str(i) + ' months'
+svc_baseline_metrics['train_base']['train_from'] = str(meses[0])
+svc_baseline_metrics['train_base']['train_to'] = str(meses[i])
+
+svc_baseline_metrics['train_base']['train_size'] = X_train.shape[0]
+svc_baseline_metrics['train_base']['train_score'] = svc.score(X_train, y_train)
+
+test_scores = []
+for j in range(len(meses[:i]), len(meses), 1):
+    X_test = vectores[nombres_targets['mes'] == meses[j]]
+    y_test = nombres_targets[nombres_targets['mes'] == meses[j]]['seccion']
+
+    test_scores.append(svc.score(X_test, y_test))
+
+svc_baseline_metrics['train_base']['test_scores'] = test_scores
+
+svc_baseline_metrics['train_base']['test_score_mean'] = np.mean(test_scores)
+
+svc_baseline_metrics['train_base']['C'] = svc.get_params()['C']
+svc_baseline_metrics['train_base']['k_features'] = X_train.shape[1]
 
 # %%
-# Paso 2
-svc2 = SVC(
-    kernel='linear', probability=True, class_weight='balanced', random_state=seed
-)
-svc2.fit(X_train_w2, y_train_w2)
-
-svc2_score_train = svc2.score(X_train_w2, y_train_w2)
-svc2_score_test = svc2.score(X_test_w2, y_test_w2)
-
-# %%
-# Paso 3
-svc3 = SVC(
-    kernel='linear', probability=True, class_weight='balanced', random_state=seed
-)
-svc3.fit(X_train_w3, y_train_w3)
-
-svc3_score_train = svc3.score(X_train_w3, y_train_w3)
-svc3_score_test = svc3.score(X_test_w3, y_test_w3)
-
-# %%
-svc_baseline_metrics = {
-    'paso_1': {
-        'train_size': X_train_w1.shape[0],
-        'test_size': X_test_w1.shape[0],
-        'train_from': walk1_train[0],
-        'train_to': walk1_train[1],
-        'test_month': walk1_test,
-        'train_accuracy': svc1_score_train,
-        'test_accuracy': svc1_score_test,
-    },
-    'paso_2': {
-        'train_size': X_train_w2.shape[0],
-        'test_size': X_test_w2.shape[0],
-        'train_from': walk2_train[0],
-        'train_to': walk2_train[1],
-        'test_month': walk2_test,
-        'train_accuracy': svc2_score_train,
-        'test_accuracy': svc2_score_test,
-    },
-    'paso_3': {
-        'train_size': X_train_w3.shape[0],
-        'test_size': X_test_w3.shape[0],
-        'train_from': walk3_train[0],
-        'train_to': walk3_train[1],
-        'test_month': walk3_test,
-        'train_accuracy': svc3_score_train,
-        'test_accuracy': svc3_score_test,
-    },
-    'average_accuracy': {
-        'train_accuracy': np.mean(
-            [svc1_score_train, svc2_score_train, svc3_score_train]
-        ),
-        'test_accuracy': np.mean([svc1_score_test, svc2_score_test, svc3_score_test]),
-    },
-}
-
 print(json.dumps(svc_baseline_metrics, indent=4))
 
 # %%
-pd.DataFrame(svc_baseline_metrics).to_csv(data_to + 'svc_baseline_metrics.csv')
-
-# %%
-# Paso 1
-y_predicted1 = svc1.predict(X_test_w1)
-cm1 = confusion_matrix(y_test_w1, y_predicted1, labels=svc1.classes_)
-disp = ConfusionMatrixDisplay(
+# train
+y_predicted_train = svc.predict(X_train)
+cm1 = confusion_matrix(y_train, y_predicted_train, normalize='true')
+disp1 = ConfusionMatrixDisplay(
     confusion_matrix=cm1, display_labels=['sociedad', 'economia', 'el-mundo']
 )
-disp.plot()
+disp1.plot()
 
-print("Métricas paso_1\n\n" + classification_report(y_test_w1, y_predicted1))
+print(
+    f'Métricas en Entrenamiento\n\n' + classification_report(y_train, y_predicted_train)
+)
 
 # %%
-# Paso 2
-y_predicted2 = svc1.predict(X_test_w2)
-cm2 = confusion_matrix(y_test_w2, y_predicted2, labels=svc2.classes_)
-disp = ConfusionMatrixDisplay(
+# Test on farthest away month
+y_predicted_test = svc.predict(X_test)
+cm2 = confusion_matrix(y_test, y_predicted_test, normalize='true')
+disp2 = ConfusionMatrixDisplay(
     confusion_matrix=cm2, display_labels=['sociedad', 'economia', 'el-mundo']
 )
-disp.plot()
+disp2.plot()
 
-print("Métricas paso_2\n\n" + classification_report(y_test_w2, y_predicted2))
-
-# %%
-# Paso 3
-y_predicted3 = svc1.predict(X_test_w3)
-cm3 = confusion_matrix(y_test_w3, y_predicted3, labels=svc3.classes_)
-disp = ConfusionMatrixDisplay(
-    confusion_matrix=cm3, display_labels=['sociedad', 'economia', 'el-mundo']
+print(
+    f'Métricas en mes más lejano ({meses[-1]}):\n\n'
+    + classification_report(y_test, y_predicted_test)
 )
-disp.plot()
-
-print("Métricas paso_3\n\n" + classification_report(y_test_w3, y_predicted3))
 
 # %% [markdown]
 # ## Importancia de Variables
 #
 # ### 1ra vuelta
+#
+# De 1% a 100% de las variables
 
 # %%
 df_results_1 = pd.DataFrame(columns=['percent_selected', 'accuracy'])
 
 # %%
 for i in tqdm(range(1, 101, 1)):
-    svc1 = SVC(
+    svc = SVC(
         kernel='linear', probability=True, class_weight='balanced', random_state=seed
     )
+
     percent = i / 100
+
     selector_features = SelectKBest(
         score_func=chi2, k=int(len(nombres_features) * percent)
     )
-    selector_features.fit(X_train_w1, y_train_w1)
+    selector_features.fit(X_train, y_train)
 
-    train_selected = selector_features.transform(X_train_w1)
-    test_selected = selector_features.transform(X_test_w1)
+    train_selected = selector_features.transform(X_train)
+    test_selected = selector_features.transform(X_test)
 
     selector_features.get_support()
 
-    svc1.fit(train_selected, y_train_w1)
+    svc.fit(train_selected, y_train)
 
-    acc_score = svc1.score(test_selected, y_test_w1)
+    acc_score = svc.score(test_selected, y_test)
 
     result = {
         'percent_selected': i,
@@ -262,9 +184,6 @@ for i in tqdm(range(1, 101, 1)):
 
 
 # %%
-# df_results_1.to_csv(data_to + 'df_feature_results_1.csv', index=False)
-
-# %%
 plt.figure()
 plt.xlabel('Percent of features selected')
 plt.ylabel('Accuracy')
@@ -273,29 +192,33 @@ plt.show()
 
 # %% [markdown]
 # ### 2da vuelta
+#
+# De 0.01% a 1% de las variables
 
 # %%
 df_results_2 = pd.DataFrame(columns=['percent_selected', 'accuracy'])
 
 # %%
 for i in tqdm(range(1, 100, 1)):
-    svc1 = SVC(
+    svc = SVC(
         kernel='linear', probability=True, class_weight='balanced', random_state=seed
     )
-    percent = i / 1000
+
+    percent = i / 10000
+
     selector_features = SelectKBest(
         score_func=chi2, k=int(len(nombres_features) * percent)
     )
-    selector_features.fit(X_train_w1, y_train_w1)
+    selector_features.fit(X_train, y_train)
 
-    train_selected = selector_features.transform(X_train_w1)
-    test_selected = selector_features.transform(X_test_w1)
+    train_selected = selector_features.transform(X_train)
+    test_selected = selector_features.transform(X_test)
 
     selector_features.get_support()
 
-    svc1.fit(train_selected, y_train_w1)
+    svc.fit(train_selected, y_train)
 
-    acc_score = svc1.score(test_selected, y_test_w1)
+    acc_score = svc.score(test_selected, y_test)
 
     result = {
         'percent_selected': percent,
@@ -305,65 +228,19 @@ for i in tqdm(range(1, 100, 1)):
     df_results_2 = df_results_2.append(result, ignore_index=True)
 
 # %%
-# df_results_2.to_csv(data_to + 'df_feature_results_2.csv', index=False)
-
-# %%
 plt.figure()
 plt.xlabel('Percent of features selected')
 plt.ylabel('Accuracy')
 plt.plot('percent_selected', 'accuracy', data=df_results_2)
 plt.show()
 
-# %% [markdown]
-# ### 3ra vuelta
-
 # %%
-df_results_3 = pd.DataFrame(columns=['percent_selected', 'accuracy'])
-
-# %%
-for i in tqdm(range(1, 100, 1)):
-    svc1 = SVC(
-        kernel='linear', probability=True, class_weight='balanced', random_state=seed
-    )
-    percent = i / 10000
-    selector_features = SelectKBest(
-        score_func=chi2, k=int(len(nombres_features) * percent)
-    )
-    selector_features.fit(X_train_w1, y_train_w1)
-
-    train_selected = selector_features.transform(X_train_w1)
-    test_selected = selector_features.transform(X_test_w1)
-
-    selector_features.get_support()
-
-    svc1.fit(train_selected, y_train_w1)
-
-    acc_score = svc1.score(test_selected, y_test_w1)
-
-    result = {
-        'percent_selected': percent,
-        'accuracy': acc_score,
-    }
-
-    df_results_3 = df_results_3.append(result, ignore_index=True)
-
-# %%
-# df_results_3.to_csv(data_to + 'df_feature_results_3.csv', index=False)
-
-# %%
-plt.figure()
-plt.xlabel('Percent of features selected')
-plt.ylabel('Accuracy')
-plt.plot('percent_selected', 'accuracy', data=df_results_3)
-plt.show()
-
-# %%
-df_results = pd.concat([df_results_1, df_results_2, df_results_3])
+df_results = pd.concat([df_results_1, df_results_2])
 df_results = df_results.sort_values(by='percent_selected').reset_index(drop=True)
 df_results
 
 # %%
-plt.figure(figsize=(15, 10))
+plt.figure()
 plt.xlabel('Percent of features selected')
 plt.ylabel('Accuracy')
 plt.plot('percent_selected', 'accuracy', data=df_results)
@@ -392,20 +269,22 @@ svc_search = optuna.integration.OptunaSearchCV(
     n_trials=100,
     random_state=seed,
     study=optuna.create_study(
-        study_name='news_svc', direction='maximize', storage='sqlite:///news_svc.db'
+        study_name='news_svc',
+        direction='maximize',
+        storage='sqlite:///' + data_to + 'news_svc.db',
     ),
 )
 
 # %%
-selector_features = SelectKBest(score_func=chi2, k=500)
-selector_features.fit(X_train_w1, y_train_w1)
+selector_features = SelectKBest(score_func=chi2, k=880)
+selector_features.fit(X_train, y_train)
 
-train_selected_w1 = selector_features.transform(X_train_w1)
-test_selected_w1 = selector_features.transform(X_test_w1)
+train_selected_w1 = selector_features.transform(X_train)
+test_selected_w1 = selector_features.transform(X_test)
 
 # %%
 # %%time
-svc_search.fit(train_selected_w1, y_train_w1)
+svc_search.fit(train_selected_w1, y_train)
 
 # %%
 study = svc_search.study
@@ -413,141 +292,122 @@ train_params = svc_search.best_params_
 train_params
 
 # %% [markdown]
-# # Entrenamiento de de modelos finales
+# # Entrenamiento de de modelos final
 
 # %%
-# Paso 1
-selector_features = SelectKBest(score_func=chi2, k=500)
-selector_features.fit(X_train_w1, y_train_w1)
+# Datasets
+X_train = vectores[nombres_targets['mes'].isin(meses[:4])]
+y_train = nombres_targets[nombres_targets['mes'].isin(meses[:4])]['seccion']
 
-train_selected_w1 = selector_features.transform(X_train_w1)
-test_selected_w1 = selector_features.transform(X_test_w1)
+selector_features = SelectKBest(score_func=chi2, k=880)
+selector_features.fit(X_train, y_train)
 
-svc1 = SVC(
+vectores = selector_features.transform(vectores)
+
+# %%
+vectores.shape
+
+# %%
+train_selected = vectores[nombres_targets['mes'].isin(meses[:4])]
+train_selected
+
+# %%
+# %%time
+svc_metrics = {}
+
+i = 4
+
+svc = SVC(
     C=train_params['C'],
     kernel='linear',
     probability=True,
     class_weight='balanced',
     random_state=seed,
 )
-svc1.fit(train_selected_w1, y_train_w1)
 
-svc1_score_train = svc1.score(train_selected_w1, y_train_w1)
-svc1_score_test = svc1.score(test_selected_w1, y_test_w1)
+svc.fit(train_selected, y_train)
 
-# %%
-# Paso 2
-selector_features = SelectKBest(score_func=chi2, k=500)
-selector_features.fit(X_train_w2, y_train_w2)
+svc_metrics['train4'] = {}
 
-train_selected_w2 = selector_features.transform(X_train_w2)
-test_selected_w2 = selector_features.transform(X_test_w2)
+svc_metrics['train4']['train_with'] = str(i) + ' months'
+svc_metrics['train4']['train_from'] = str(meses[0])
+svc_metrics['train4']['train_to'] = str(meses[i])
 
-svc2 = SVC(
-    C=train_params['C'],
-    kernel='linear',
-    probability=True,
-    class_weight='balanced',
-    random_state=seed,
-)
-svc2.fit(train_selected_w2, y_train_w2)
+svc_metrics['train4']['train_size'] = train_selected.shape[0]
+svc_metrics['train4']['train_score'] = svc.score(train_selected, y_train)
 
-svc2_score_train = svc2.score(train_selected_w2, y_train_w2)
-svc2_score_test = svc2.score(test_selected_w2, y_test_w2)
+test_scores = []
+for j in range(len(meses[:i]), len(meses), 1):
+    X_test = vectores[nombres_targets['mes'] == meses[j]]
+    y_test = nombres_targets[nombres_targets['mes'] == meses[j]]['seccion']
 
-# %%
-# Paso 3
-selector_features = SelectKBest(score_func=chi2, k=500)
-selector_features.fit(X_train_w3, y_train_w3)
+    test_scores.append(svc.score(X_test, y_test))
 
-train_selected_w3 = selector_features.transform(X_train_w3)
-test_selected_w3 = selector_features.transform(X_test_w3)
+svc_metrics['train4']['test_scores'] = test_scores
 
-svc3 = SVC(
-    C=train_params['C'],
-    kernel='linear',
-    probability=True,
-    class_weight='balanced',
-    random_state=seed,
-)
-svc3.fit(train_selected_w3, y_train_w3)
+svc_metrics['train4']['test_score_mean'] = np.mean(test_scores)
 
-svc3_score_train = svc3.score(train_selected_w3, y_train_w3)
-svc3_score_test = svc3.score(test_selected_w3, y_test_w3)
+svc_metrics['train4']['C'] = train_params['C']
+svc_metrics['train4']['k_features'] = train_selected.shape[1]
 
 # %%
-svc_final_metrics = {
-    'paso_1': {
-        'train_size': X_train_w1.shape[0],
-        'test_size': X_test_w1.shape[0],
-        'train_from': walk1_train[0],
-        'train_to': walk1_train[1],
-        'test_month': walk1_test,
-        'train_accuracy': svc1_score_train,
-        'test_accuracy': svc1_score_test,
-    },
-    'paso_2': {
-        'train_size': X_train_w2.shape[0],
-        'test_size': X_test_w2.shape[0],
-        'train_from': walk2_train[0],
-        'train_to': walk2_train[1],
-        'test_month': walk2_test,
-        'train_accuracy': svc2_score_train,
-        'test_accuracy': svc2_score_test,
-    },
-    'paso_3': {
-        'train_size': X_train_w3.shape[0],
-        'test_size': X_test_w3.shape[0],
-        'train_from': walk3_train[0],
-        'train_to': walk3_train[1],
-        'test_month': walk3_test,
-        'train_accuracy': svc3_score_train,
-        'test_accuracy': svc3_score_test,
-    },
-    'average_accuracy': {
-        'train_accuracy': np.mean(
-            [svc1_score_train, svc2_score_train, svc3_score_train]
-        ),
-        'test_accuracy': np.mean([svc1_score_test, svc2_score_test, svc3_score_test]),
-    },
-}
-
-print(json.dumps(svc_final_metrics, indent=4))
+print(json.dumps(svc_metrics, indent=4))
 
 # %%
-pd.DataFrame(svc_final_metrics).to_csv(data_to + 'svc_final_metrics.csv')
+with open(data_to + 'svc_metrics.json', 'w') as fp:
+    json.dump({**svc_baseline_metrics, **svc_metrics}, fp, indent=4)
+
+# %% [markdown]
+# ## Degradación del Accuracy
 
 # %%
-# Paso 1
-y_predicted1 = svc1.predict(test_selected_w1)
-cm1 = confusion_matrix(y_test_w1, y_predicted1, labels=svc1.classes_)
-disp = ConfusionMatrixDisplay(
+with open(data_to + 'nb_metrics.json', 'r') as fp:
+    nb_metrics = json.load(fp)
+
+# %%
+# data
+plt.plot(nb_metrics['train4']['test_scores'], label='nb_baseline')
+plt.plot(svc_baseline_metrics['train_base']['test_scores'], label='svc_baseline')
+plt.plot(svc_metrics['train4']['test_scores'], label='svc_train_final')
+
+# format
+plt.title('Degradación del Accuracy')
+plt.ylabel('Accuracy')
+plt.ylim(0.8, 1)
+plt.xlabel('Cantidad de meses después del entrenamiento')
+
+# plot
+plt.legend()
+plt.show()
+
+# %%
+# train
+y_predicted_train = svc.predict(train_selected)
+cm1 = confusion_matrix(y_train, y_predicted_train, normalize='true')
+disp1 = ConfusionMatrixDisplay(
     confusion_matrix=cm1, display_labels=['sociedad', 'economia', 'el-mundo']
 )
-disp.plot()
+disp1.plot()
 
-print("Métricas paso_1\n\n" + classification_report(y_test_w1, y_predicted1))
+print(
+    f'Métricas en Entrenamiento\n\n' + classification_report(y_train, y_predicted_train)
+)
 
 # %%
-# Paso 2
-y_predicted2 = svc2.predict(test_selected_w2)
-cm2 = confusion_matrix(y_test_w2, y_predicted2, labels=svc2.classes_)
-disp = ConfusionMatrixDisplay(
+X_test = vectores[nombres_targets['mes'] == meses[-1]]
+y_test = nombres_targets[nombres_targets['mes'] == meses[-1]]['seccion']
+
+# Test on farthest away month
+y_predicted_test = svc.predict(X_test)
+cm2 = confusion_matrix(y_test, y_predicted_test, normalize='true')
+disp2 = ConfusionMatrixDisplay(
     confusion_matrix=cm2, display_labels=['sociedad', 'economia', 'el-mundo']
 )
-disp.plot()
+disp2.plot()
 
-print("Métricas paso_2\n\n" + classification_report(y_test_w2, y_predicted2))
-
-# %%
-# Paso 3
-y_predicted3 = svc3.predict(test_selected_w3)
-cm3 = confusion_matrix(y_test_w3, y_predicted3, labels=svc3.classes_)
-disp = ConfusionMatrixDisplay(
-    confusion_matrix=cm3, display_labels=['sociedad', 'economia', 'el-mundo']
+print(
+    f'Métricas en mes más lejano ({meses[-1]}):\n\n'
+    + classification_report(y_test, y_predicted_test)
 )
-disp.plot()
-
-print("Métricas paso_3\n\n" + classification_report(y_test_w3, y_predicted3))
 
 # %%
